@@ -13,6 +13,7 @@ import { makeArray } from '@ember/array';
 import { assign } from '@ember/polyfills';
 import Service from '@ember/service';
 import { next, cancel } from '@ember/runloop';
+import { isArray } from '@ember/array';
 
 import { FormatDate, FormatMessage, FormatNumber, FormatRelative, FormatTime } from '../-private/formatters';
 import isArrayEqual from '../-private/is-array-equal';
@@ -34,23 +35,20 @@ export default Service.extend(Evented, {
   _timer: null,
 
   /** @public **/
-  locale: computed({
-    set(_, localeName) {
-      const proposed = makeArray(localeName).map(normalizeLocale);
+  get locale() {
+    return this._locale;
+  },
 
-      if (!isArrayEqual(proposed, this._locale)) {
-        this._locale = proposed;
-        cancel(this._timer);
-        this._timer = next(() => this.trigger('localeChanged'));
-        this.updateDocumentLanguage(this._locale);
-      }
+  set locale(localeData) {
+    const proposed = makeArray(localeData).map(normalizeLocale);
 
-      return this._locale;
-    },
-    get() {
-      return this._locale;
+    if (!isArrayEqual(proposed, this._locale)) {
+      this.set('_locale', proposed);
+      cancel(this._timer);
+      this._timer = next(() => this.trigger('localeChanged'));
+      this.updateDocumentLanguage(this._locale);
     }
-  }),
+  },
 
   /**
    * Returns the first locale of the currently active locales
@@ -58,7 +56,15 @@ export default Service.extend(Evented, {
    * @property primaryLocale
    * @public
    */
-  primaryLocale: computed.readOnly('locale.0'),
+  // primaryLocale: computed.readOnly('locale.0'),
+
+  get primaryLocale() {
+    if (isArray(this.locale)) {
+      return this.get('locale.0');
+    } else {
+      return this.locale;
+    }
+  },
 
   /** @public **/
   formatRelative: formatter('relative'),
